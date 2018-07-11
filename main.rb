@@ -1,4 +1,5 @@
 require 'cryptoexchange'
+require 'sinatra'
 require 'redis'
 require 'json'
 
@@ -42,19 +43,77 @@ class PriceFetcher
     end
   end
 
+  def calculate_umine_price
+    ex_key = "umine"
+    @prices[ex_key]={}
+    @prices[ex_key]["BTC_AUD"]={}
+
+    @prices[ex_key]["ETH_AUD"]={}
+
+    @prices[ex_key]["BTC_AUD"]["bid"] = @prices['coinjar']['BTC_AUD']['best_bid']*0.98
+    @prices[ex_key]["BTC_AUD"]["ask"] = @prices['coinjar']['BTC_AUD']['best_ask']*1.02
+    @prices[ex_key]["ETH_AUD"]["bid"] = @prices['coinjar']['ETH_AUD']['best_bid']*0.98
+    @prices[ex_key]["ETH_AUD"]["ask"] = @prices['coinjar']['ETH_AUD']['best_ask']*1.02
+
+  end
+
+
 
   def to_json
     @prices.to_json
   end
 
-  def print
+  def pretty_print
     puts JSON.pretty_generate(@prices)
   end
+
+  def always_fetch
+    while true
+      begin
+        do_fetch
+        calculate_umine_price
+        pretty_print
+        sleep 30
+      rescue
+        sleep 1
+        #just retry
+      end
+    end
+  end
+
 end
 
+$pf=nil
+
+t0=Thread.new{
+
+  class SinatraServer < Sinatra::Application
+
+    puts "Sinatra running in thread: #{Thread.current}"
+
+    class << self
+      attr_reader :sinatra_thread
+    end
+
+    get '/' do
+      $pf.to_json
+    end
+
+    get '/test' do
+      "test"
+    end
+
+    run!
+  end
+
+}
+
+t1=Thread.new {
+
+  $pf= PriceFetcher.new
+  $pf.always_fetch
+}
 
 
-pf= PriceFetcher.new
-
-pf.do_fetch
-puts pf.print
+t0.join
+t1.join
