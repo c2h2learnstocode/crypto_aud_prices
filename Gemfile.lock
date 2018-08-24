@@ -3,7 +3,7 @@ GEM
   specs:
     addressable (2.5.2)
       public_suffix (>= 2.0.2, < 4.0)
-    cryptoexchange (0.23.0)
+    cryptoexchange (0.24.0)
       http (~> 3.0.0)
       lru_redux
     domain_name (0.5.20180417)
@@ -19,7 +19,7 @@ GEM
     http_parser.rb (0.6.0)
     lru_redux (1.1.0)
     mustermann (1.0.3)
-    public_suffix (3.0.2)
+    public_suffix (3.0.3)
     rack (2.0.5)
     rack-protection (2.0.3)
       rack
@@ -38,7 +38,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  cryptoexchange
+  cryptoexchange (= 0.24.0)
   redis
   sinatra (= 2.0.3)
 
