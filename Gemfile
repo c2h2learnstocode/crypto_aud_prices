@@ -1,4 +1,4 @@
 source 'https://rubygems.org'
 gem 'cryptoexchange'
-gem 'sinatra'
+gem 'sinatra',  "2.0.3"
 gem 'redis'
