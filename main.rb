@@ -16,6 +16,25 @@ class PriceFetcher
 
   end
 
+  def do_fetch_binance
+    puts "processing binance"
+    ex='binance'
+    pairs = @client.pairs(ex)
+    @prices["umine"]={}
+    pairs.each do |pair|
+      if(pair.base=="ZEC" and pair.target == "BTC")
+        @prices["umine"]["ZEC_BTC"]={}
+        @prices["umine"]["ZEC_BTC"]["bid"]=@client.order_book(pair).bids.sort!{|x,y| y.price.to_f <=>x.price.to_f }.first.price.to_f
+        @prices["umine"]["ZEC_BTC"]["ask"]=@client.order_book(pair).asks.sort!{|x,y| y.price.to_f <=>x.price.to_f }.first.price.to_f
+      end
+      if(pair.base=="XMR" and pair.target == "BTC")
+        @prices["umine"]["XMR_BTC"]={}
+        @prices["umine"]["XMR_BTC"]["bid"]=@client.order_book(pair).bids.sort!{|x,y| y.price.to_f <=>x.price.to_f }.first.price.to_f
+        @prices["umine"]["XMR_BTC"]["ask"]=@client.order_book(pair).asks.sort!{|x,y| y.price.to_f <=>x.price.to_f }.first.price.to_f
+      end
+    end
+    puts @prices["umine"]
+  end
 
   def do_fetch
     @exchanges.each do |ex|
@@ -45,21 +64,35 @@ class PriceFetcher
 
   def calculate_umine_price
     ex_key = "umine"
-    @prices[ex_key]={}
     @prices[ex_key]["BTC_AUD"]={}
 
     @prices[ex_key]["ETH_AUD"]={}
+    @prices[ex_key]["ZEC_AUD"]={}
+    @prices[ex_key]["XMR_AUD"]={}
 
     @prices[ex_key]["BTC_AUD"]["bid"] = @prices['coinjar']['BTC_AUD']['best_bid']*0.98
     @prices[ex_key]["BTC_AUD"]["ask"] = @prices['coinjar']['BTC_AUD']['best_ask']*1.02
     @prices[ex_key]["ETH_AUD"]["bid"] = @prices['coinjar']['ETH_AUD']['best_bid']*0.98
     @prices[ex_key]["ETH_AUD"]["ask"] = @prices['coinjar']['ETH_AUD']['best_ask']*1.02
 
+    puts @prices
+    @prices[ex_key]["ZEC_AUD"]["bid"] = @prices['coinjar']['BTC_AUD']['best_ask']*1.01*@prices["umine"]["ZEC_BTC"]["bid"]
+    @prices[ex_key]["XMR_AUD"]["bid"] = @prices['coinjar']['BTC_AUD']['best_bid']*0.99*@prices["umine"]["XMR_BTC"]["bid"]
+    @prices[ex_key]["ZEC_AUD"]["ask"] = @prices['coinjar']['BTC_AUD']['best_ask']*1.01*@prices["umine"]["ZEC_BTC"]["ask"]
+    @prices[ex_key]["XMR_AUD"]["ask"] = @prices['coinjar']['BTC_AUD']['best_bid']*0.99*@prices["umine"]["XMR_BTC"]["ask"]
+
+
+    puts @prices
   end
 
+  def to_umine_json
+    out = @prices.dup
+    out.delete("acx")
+    out.delete("coinjar")
+    out.to_json
+  end
 
-
-  def to_json
+  def _to_json
     @prices.to_json
   end
 
@@ -70,11 +103,13 @@ class PriceFetcher
   def always_fetch
     while true
       begin
+        do_fetch_binance
         do_fetch
         calculate_umine_price
         pretty_print
         sleep 30
-      rescue
+      rescue=> exception
+        puts exception
         sleep 1
         #just retry
       end
@@ -84,7 +119,6 @@ class PriceFetcher
 end
 
 $pf=nil
-
 t0=Thread.new{
 
   class SinatraServer < Sinatra::Application
@@ -98,7 +132,7 @@ t0=Thread.new{
     end
 
     get '/' do
-      $pf.to_json
+      $pf.to_umine_json
     end
 
     get '/test' do
@@ -109,7 +143,6 @@ t0=Thread.new{
   end
 
 }
-
 t1=Thread.new {
 
   $pf= PriceFetcher.new
