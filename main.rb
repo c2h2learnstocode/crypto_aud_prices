@@ -91,6 +91,8 @@ t0=Thread.new{
 
     puts "Sinatra running in thread: #{Thread.current}"
 
+    set :bind, '0.0.0.0'
+
     class << self
       attr_reader :sinatra_thread
     end
